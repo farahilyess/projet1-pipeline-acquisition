@@ -11,11 +11,10 @@ int main(void){
 	GPIOA->MODER &= ~((1UL << 6) | (1UL << 4));
 	GPIOA->MODER |= ((1UL << 5) | (1UL << 7));
 
-	GPIOA->AFR[0] &= ~ (1UL << 11);
-	GPIOA->AFR[0] |= ((1UL << 8) | (1UL << 9) |(1UL << 10));
+	// Configuration AF7 pour USART2
+	GPIOA->AFR[0] &= ~ ((0xFUL << 8) | (0xFUL << 12));
+	GPIOA->AFR[0] |= ((0x7UL << 8) | (0x7UL << 12));
 
-	GPIOA->AFR[0] &= ~ (1UL << 15);
-	GPIOA->AFR[0] |= ((1UL << 12) | (1UL << 13) |(1UL << 14));
 
 	while(1){
 
