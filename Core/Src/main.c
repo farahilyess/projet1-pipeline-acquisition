@@ -1,10 +1,9 @@
 #include "main.h"
 #include"stm32f446xx.h"
 
-// Mettre toute la config USART dans une fonction, et plus dans le main
 void usart_init(void){
 	RCC->APB1ENR |= RCC_APB1ENR_USART2EN; // Activation clock pour l'USART2
-	RCC->AHB1ENR |= RCC_AHB1ENR_GPIOAEN; // Activation clock GPIOA USART2 sur PA2 et PA3
+	RCC->AHB1ENR |= RCC_AHB1ENR_GPIOAEN; // Activation clock GPIOA car USART2 sur PA2 et PA3
 
 	// Configuration de PA2 et PA3 en alternate function
 	GPIOA->MODER &= ~((1UL << 6) | (1UL << 4));
@@ -32,6 +31,23 @@ void usart_send(uint8_t msg){ // on a seulement 8 bits de data à envoyer donc u
 
 	USART2->DR = msg;
 }
+
+void i2c_init(void){
+	RCC->APB1ENR |= RCC_APB1ENR_I2C1EN; // Activation clock pour I2C1
+	RCC->AHB1ENR |= RCC_AHB1ENR_GPIOBEN ; // Activation clock GPIOB car I2C sur PB8 et PB9
+
+	// Configuration de PB8 et PB9 en alternate function
+	GPIOB->MODER &= ~((3UL << 16) | (3UL << 18));
+	GPIOB->MODER |= ((1UL << 17) | (1UL << 19));
+
+	// Configuration mode AF4 pour I2C1
+	GPIOB->AFR[1] &= ~ ((0xFUL << 0) | (0xFUL << 4));
+	GPIOB->AFR[1] |= ((0x4UL << 0) | (0x4UL << 4));
+
+	GPIOB->OTYPER |= ((1UL << 8) |(1UL << 9));
+
+}
+
 int main(void){
 
 	uint8_t msg = 'A';
