@@ -46,6 +46,19 @@ void i2c_init(void){
 
 	GPIOB->OTYPER |= ((1UL << 8) |(1UL << 9));
 
+	I2C1->CR2 &= ~ (0x3FUL << 0);
+	I2C1->CR2 |= (16UL << 0); // 16 MHz
+
+	I2C1->CCR &= ~ ((1UL << 15) | (1UL << 14) | (0xFFFUL << 0));
+	I2C1->CCR |=  (80UL << 0);
+
+	//I2C1->TRISE;
+
+	//I2C1->CR1 ; // Activation peripherique
+
+	// Start à séparer de l'init
+	//I2C1->CR1 ; // START
+
 }
 
 int main(void){
