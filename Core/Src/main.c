@@ -52,19 +52,21 @@ void i2c_init(void){
 	I2C1->CCR &= ~ ((1UL << 15) | (1UL << 14) | (0xFFFUL << 0));
 	I2C1->CCR |=  (80UL << 0);
 
-	//I2C1->TRISE;
+	I2C1->TRISE = 17U;
 
-	//I2C1->CR1 ; // Activation peripherique
-
-	// Start à séparer de l'init
-	//I2C1->CR1 ; // START
+	I2C1->CR1 |= (1UL << 0) ; // Activation peripherique
 
 }
 
 int main(void){
 
-	uint8_t msg = 'A';
 	usart_init();
+	i2c_init();
+	I2C1->CR1 |= (1UL << 8); // START
+	while ((I2C1->SR1 & 0x01UL ) == 0){
+
+	}
+	uint8_t msg = '1';
 	usart_send(msg);
 
 	while(1){
