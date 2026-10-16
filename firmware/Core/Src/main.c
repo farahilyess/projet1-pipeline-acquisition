@@ -2,9 +2,13 @@
 #include "stm32f446xx.h"
 
 #define MPU6050_I2C_ADDR (0x68UL)
-#define I2C_WRITE_MODE (0x00UL)
-#define I2C_READ_MODE (0x01UL)
 #define MPU6050_REG_WHO_AM_I (0x75UL)
+#define MPU6050_REG_PWR_MGMT (0x6BUL)
+
+#define I2C_WRITE_MODE (0UL)
+#define I2C_READ_MODE (1UL)
+#define I2C_READ_SUCCESS (0UL)
+
 
 void usartInit(void){
 	RCC->APB1ENR |= RCC_APB1ENR_USART2EN; // Activation clock pour l'USART2
@@ -71,7 +75,9 @@ static void i2cStart(void){
 	}
 }
 
-uint8_t i2cRead(void){
+void i2cRead(uint32_t i2c_registre_a_lire, uint8_t* valeur_lue){
+
+	//uint32_t read_result; // initialiser après comme dans le filtre en C
 
 	i2cStart();
 
@@ -84,7 +90,7 @@ uint8_t i2cRead(void){
 	(void)I2C1->SR1;
 	(void)I2C1->SR2;
 
-	I2C1->DR = MPU6050_REG_WHO_AM_I;
+	I2C1->DR = i2c_registre_a_lire;
 
 	while ((I2C1->SR1 & 0x04UL ) == 0){
 
@@ -109,15 +115,50 @@ uint8_t i2cRead(void){
 
 	}
 
-	return (uint8_t)I2C1->DR;
+
+	*valeur_lue = (uint8_t)I2C1->DR;
+
 }
+
+void i2cWrite(uint32_t i2c_registre_a_lire){
+	i2cStart();
+
+	I2C1->DR = (MPU6050_I2C_ADDR << 1) | (I2C_WRITE_MODE); // On concatene l'adresse avec le mode ecriture / lecture
+
+	while ((I2C1->SR1 & 0x02UL ) == 0){
+
+	}
+
+	(void)I2C1->SR1;
+	(void)I2C1->SR2;
+
+	I2C1->DR = i2c_registre_a_lire;
+
+	while ((I2C1->SR1 & 0x04UL ) == 0){
+
+	}
+
+	I2C1->DR = 0x01;
+
+	while ((I2C1->SR1 & 0x04UL ) == 0){
+
+	}
+
+	I2C1->CR1 |= (1UL << 9);
+
+}
+
 
 int main(void){
 
+	uint8_t valeur_lue;
 	usartInit();
 	i2cInit();
-	uint8_t msg = i2cRead();
-	usartSend(msg);
+
+	i2cWrite(MPU6050_REG_PWR_MGMT);
+
+	i2cRead(MPU6050_REG_PWR_MGMT, &valeur_lue);
+	usartSend(valeur_lue);
 
 	while(1){
 
