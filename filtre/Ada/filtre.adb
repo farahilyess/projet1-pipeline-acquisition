@@ -26,10 +26,10 @@ Angle_Accelero_Y :  Float;
 begin
 
    Angle_Accelero_X := Ada.Numerics.Elementary_Functions.Arctan (Y => Accel_Y_Float, 
-                                                              X => Ada.Numerics.Elementary_Functions.Sqrt(Accel_X_Float * Accel_X_Float + Accel_Z_Float * Accel_Z_Float));
+                                                                 X => Ada.Numerics.Elementary_Functions.Sqrt(Accel_X_Float * Accel_X_Float + Accel_Z_Float * Accel_Z_Float));
    
    Angle_Accelero_Y := Ada.Numerics.Elementary_Functions.Arctan (Y => Accel_X_Float, 
-                                                              X => Ada.Numerics.Elementary_Functions.Sqrt(Accel_Y_Float * Accel_Y_Float + Accel_Z_Float * Accel_Z_Float));
+                                                                 X => Ada.Numerics.Elementary_Functions.Sqrt(Accel_Y_Float * Accel_Y_Float + Accel_Z_Float * Accel_Z_Float));
    
    Angle_X := Angle (Coeff_Float * (Angle_X_Float + Vit_Angulaire_X_Float * Delta_T_Float) + (1.0 - Coeff_Float) * Angle_Accelero_X);
    Angle_Y := Angle (Coeff_Float * (Angle_Y_Float + Vit_Angulaire_Y_Float * Delta_T_Float) + (1.0 - Coeff_Float) * Angle_Accelero_Y);
