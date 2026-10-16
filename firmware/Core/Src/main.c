@@ -4,6 +4,9 @@
 #define MPU6050_I2C_ADDR (0x68UL)
 #define MPU6050_REG_WHO_AM_I (0x75UL)
 #define MPU6050_REG_PWR_MGMT (0x6BUL)
+#define MPU6050_ACCEL_Z_MSB (0x3FUL)
+#define MPU6050_ACCEL_Z_LSB (0x40UL)
+
 
 #define I2C_WRITE_MODE (0UL)
 #define I2C_READ_MODE (1UL)
@@ -39,6 +42,27 @@ void usartSend(uint8_t msg){ // on a seulement 8 bits de data à envoyer donc ui
 	}
 
 	USART2->DR = msg;
+}
+
+void usartConvertHexa(uint8_t entree, uint8_t* MSB, uint8_t* LSB){
+
+	*MSB = (entree >> 4);
+	*LSB = (entree & 0x0F);
+
+	if(0 <= *MSB && *MSB <= 9){
+		*MSB = *MSB + '0';
+	}
+	else{
+		*MSB = (*MSB - 10) + 'A';
+	}
+
+	if(0 <= *LSB && *LSB <= 9){
+		*LSB = *LSB + '0';
+	}
+	else{
+		*LSB = (*LSB - 10) + 'A';
+	}
+
 }
 
 void i2cInit(void){
@@ -151,14 +175,20 @@ void i2cWrite(uint32_t i2c_registre_a_lire){
 
 int main(void){
 
-	uint8_t valeur_lue;
+	uint8_t accel_Z_MSB, accel_Z_LSB;
+	uint8_t MSB, LSB;
 	usartInit();
 	i2cInit();
 
-	i2cWrite(MPU6050_REG_PWR_MGMT);
+	i2cWrite(MPU6050_REG_PWR_MGMT); // Mise en marche des mesures
 
-	i2cRead(MPU6050_REG_PWR_MGMT, &valeur_lue);
-	usartSend(valeur_lue);
+	i2cRead(MPU6050_ACCEL_Z_MSB, &accel_Z_MSB);
+	usartConvertHexa(accel_Z_MSB, &MSB, &LSB);
+	usartSend(MSB);
+	usartSend(LSB);
+	//i2cRead(MPU6050_ACCEL_Z_LSB, &accel_Z_LSB);
+	//usartSend(accel_Z_LSB);
+
 
 	while(1){
 
