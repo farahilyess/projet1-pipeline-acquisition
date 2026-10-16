@@ -1,7 +1,12 @@
 #include "main.h"
-#include"stm32f446xx.h"
+#include "stm32f446xx.h"
 
-void usart_init(void){
+#define MPU6050_I2C_ADDR (0x68UL)
+#define I2C_WRITE_MODE (0x00UL)
+#define I2C_READ_MODE (0x01UL)
+#define MPU6050_REG_WHO_AM_I (0x75UL)
+
+void usartInit(void){
 	RCC->APB1ENR |= RCC_APB1ENR_USART2EN; // Activation clock pour l'USART2
 	RCC->AHB1ENR |= RCC_AHB1ENR_GPIOAEN; // Activation clock GPIOA car USART2 sur PA2 et PA3
 
@@ -23,7 +28,7 @@ void usart_init(void){
 	USART2->CR1 |= (1UL << 3);
 }
 
-void usart_send(uint8_t msg){ // on a seulement 8 bits de data à envoyer donc uint8_t
+void usartSend(uint8_t msg){ // on a seulement 8 bits de data à envoyer donc uint8_t
 // retourner erreur plus tard
 	while ((USART2->SR & 0x80 ) == 0){ // 0x80 correspond à bit 7 soit TXE à 1
 
@@ -32,7 +37,7 @@ void usart_send(uint8_t msg){ // on a seulement 8 bits de data à envoyer donc u
 	USART2->DR = msg;
 }
 
-void i2c_init(void){
+void i2cInit(void){
 	RCC->APB1ENR |= RCC_APB1ENR_I2C1EN; // Activation clock pour I2C1
 	RCC->AHB1ENR |= RCC_AHB1ENR_GPIOBEN ; // Activation clock GPIOB car I2C sur PB8 et PB9
 
@@ -54,20 +59,65 @@ void i2c_init(void){
 
 	I2C1->TRISE = 17U;
 
-	I2C1->CR1 |= (1UL << 0) ; // Activation peripherique
+	I2C1->CR1 |= (1UL << 0); // Activation peripherique
 
+}
+
+static void i2cStart(void){
+	I2C1->CR1 |= (1UL << 8); // START
+
+	while ((I2C1->SR1 & 0x01UL ) == 0){
+
+	}
+}
+
+uint8_t i2cRead(void){
+
+	i2cStart();
+
+	I2C1->DR = (MPU6050_I2C_ADDR << 1) | (I2C_WRITE_MODE); // On concatene l'adresse avec le mode ecriture / lecture
+
+	while ((I2C1->SR1 & 0x02UL ) == 0){
+
+	}
+
+	(void)I2C1->SR1;
+	(void)I2C1->SR2;
+
+	I2C1->DR = MPU6050_REG_WHO_AM_I;
+
+	while ((I2C1->SR1 & 0x04UL ) == 0){
+
+	}
+
+	i2cStart();
+
+	I2C1->DR = (MPU6050_I2C_ADDR << 1) | (I2C_READ_MODE);
+
+	while ((I2C1->SR1 & 0x02UL ) == 0){
+
+	}
+
+	I2C1->CR1 &=~ (1UL << 10);
+
+	(void)I2C1->SR1;
+	(void)I2C1->SR2;
+
+	I2C1->CR1 |= (1UL << 9);
+
+	while ((I2C1->SR1 & 0x40UL ) == 0){
+
+	}
+
+	return (uint8_t)I2C1->DR;
 }
 
 int main(void){
 
-	usart_init();
-	i2c_init();
-	I2C1->CR1 |= (1UL << 8); // START
-	while ((I2C1->SR1 & 0x01UL ) == 0){
-
-	}
-	uint8_t msg = '1';
-	usart_send(msg);
+	usartInit();
+	i2cInit();
+	uint8_t msg = i2cRead();
+	usartSend(msg);
 
 	while(1){
 
