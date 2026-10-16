@@ -183,9 +183,11 @@ int main(void){
 	i2cWrite(MPU6050_REG_PWR_MGMT); // Mise en marche des mesures
 
 	i2cRead(MPU6050_ACCEL_Z_MSB, &accel_Z_MSB);
-	usartConvertHexa(accel_Z_MSB, &MSB, &LSB);
-	usartSend(MSB);
-	usartSend(LSB);
+	i2cRead(MPU6050_ACCEL_Z_LSB, &accel_Z_LSB);
+	int16_t accel_Z = (int16_t)(((uint16_t) accel_Z_MSB << 8) | (uint16_t) accel_Z_LSB);
+	// usartConvertHexa(accel_Z_MSB, &MSB, &LSB);
+	//usartSend(MSB);
+	//usartSend(LSB);
 	//i2cRead(MPU6050_ACCEL_Z_LSB, &accel_Z_LSB);
 	//usartSend(accel_Z_LSB);
 
