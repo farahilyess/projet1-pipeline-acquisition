@@ -2,6 +2,12 @@
 #define FILTRE_H
 
 #include <stdint.h>
+#include "platform_types.h"
+
+/* Pour appeler ce filtre, il faut d'abord faire une mesure avec un coefficient à 0 pour ne considérer que la mesure 
+   de l'accéléromètre initialement.
+   Ensuite, on donne le résultat de cet appel initial en input au filtre pour les prochaines mesures.
+*/
 
 #define FILTER_PI (3.14159265358979323846f)
 
@@ -24,11 +30,11 @@
 #define FILTER_MAX_ANGLE (FILTER_PI)      // en rad
 #define FILTER_MIN_ANGLE (-FILTER_PI)     // en rad
 
-uint32_t filtreCalculAngles(float* angle_X, float* angle_Y, 
-                            float vit_angulaire_X, float vit_angulaire_Y,
-                            float accel_X, float accel_Y, float accel_Z,
-                            float delta_t, 
-                            float coeff);
+uint32_t filtreCalculAngles(float32_t* angle_X, float32_t* angle_Y, 
+                            float32_t vit_angulaire_X, float32_t vit_angulaire_Y,
+                            float32_t accel_X, float32_t accel_Y, float32_t accel_Z,
+                            float32_t delta_t, 
+                            float32_t coeff);
 
 #endif 
 
