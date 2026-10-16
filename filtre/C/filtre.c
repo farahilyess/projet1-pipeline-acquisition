@@ -1,35 +1,50 @@
 #include "filtre.h"
-#include <math.h>
 #include <stddef.h> 
+#include <math.h>
+#include <stdbool.h>
 
+// Cette fonction vérifie que le paramètre est dans l'intervalle attendue, pour ensuite faire une vérification inverse pour avoir une erreur en cas de NaN
+static bool filtreIntervalleVerification(float parametre, float param_min, float param_max){
 
-uint32_t filtreInputVerification(float* angle_X, float* angle_Y, float vit_angulaire_X, float vit_angulaire_Y, float accel_X, float accel_Y, float accel_Z, float delta_t, float coeff){
+    bool resultat = false;
 
-    uint32_t resultat = FILTER_INPUT_VERIFICATION_SUCCESS; 
-
-    if (angle_X == NULL || angle_Y == NULL){
-        resultat = FILTER_ANGLE_POINTER_IS_NULL;
-    }
-    else if  ((35.0f < vit_angulaire_X) || (vit_angulaire_X < - 35.0f) || (35.0f < vit_angulaire_Y) || (vit_angulaire_Y < - 35.0f)){
-        resultat = FILTER_ANGULAR_SPEED_OUT_OF_RANGE;
-    }
-    else if ((157.0f < accel_X) || (accel_X < - 157.0f ) || (157.0f < accel_Y) || (accel_Y < - 157.0f ) || (157.0f < accel_Z) || (accel_Z < - 157.0f )) {
-        resultat = FILTER_ACCELERATION_OUT_OF_RANGE;
-    }
-    else if ((1.0f < delta_t) || (delta_t < 0.0f )){
-        resultat = FILTER_TIME_INTERVAL_OUT_OF_RANGE;
-    }
-    else if ((1.0f < coeff) || (coeff < 0.0f )){
-        resultat = FILTER_COEFFICIENT_OUT_OF_RANGE;
+    if (param_min <= parametre && parametre <= param_max){
+        resultat = true;
     }
 
     return resultat;
 }
 
 
-uint32_t filtreCalculAngles(float* angle_X, float* angle_Y, float vit_angulaire_X, float vit_angulaire_Y, float accel_X, float accel_Y, float accel_Z, float delta_t, float coeff){
-    float angle_accelero_X, angle_accelero_Y;
+static uint32_t filtreInputVerification(float* angle_X, float* angle_Y, float vit_angulaire_X, float vit_angulaire_Y, float accel_X, float accel_Y, float accel_Z, float delta_t, float coeff){
 
+    uint32_t resultat = FILTER_INPUT_VERIFICATION_SUCCESS; 
+
+    if (angle_X == NULL || angle_Y == NULL){
+        resultat = FILTER_ANGLE_POINTER_IS_NULL;
+    }
+    else if (!(filtreIntervalleVerification(*angle_X, FILTER_MIN_ANGLE, FILTER_MAX_ANGLE) && filtreIntervalleVerification(*angle_Y, FILTER_MIN_ANGLE, FILTER_MAX_ANGLE))){
+        resultat = FILTER_ANGLE_OUT_OF_RANGE;
+    }
+    else if (!(filtreIntervalleVerification(vit_angulaire_X, FILTER_MIN_ANGULAR_SPEED, FILTER_MAX_ANGULAR_SPEED) && filtreIntervalleVerification(vit_angulaire_Y, FILTER_MIN_ANGULAR_SPEED, FILTER_MAX_ANGULAR_SPEED))){
+        resultat = FILTER_ANGULAR_SPEED_OUT_OF_RANGE;
+    }
+    else if (!(filtreIntervalleVerification(accel_X, FILTER_MIN_ACCELERATION, FILTER_MAX_ACCELERATION) && filtreIntervalleVerification(accel_Y, FILTER_MIN_ACCELERATION, FILTER_MAX_ACCELERATION) && filtreIntervalleVerification(accel_Z, FILTER_MIN_ACCELERATION, FILTER_MAX_ACCELERATION))) {
+        resultat = FILTER_ACCELERATION_OUT_OF_RANGE;
+    }
+    else if (!(filtreIntervalleVerification(delta_t, FILTER_MIN_TIME_INTERVAL, FILTER_MAX_TIME_INTERVAL))){
+        resultat = FILTER_TIME_INTERVAL_OUT_OF_RANGE;
+    }
+    else if (!(filtreIntervalleVerification(coeff, 0.0f, 1.0f))){
+        resultat = FILTER_COEFFICIENT_OUT_OF_RANGE;
+    }
+    return resultat;
+}
+
+
+uint32_t filtreCalculAngles(float* angle_X, float* angle_Y, float vit_angulaire_X, float vit_angulaire_Y, float accel_X, float accel_Y, float accel_Z, float delta_t, float coeff){
+    
+    float angle_accelero_X, angle_accelero_Y;
 
     uint32_t filtre_verification_resultat = filtreInputVerification(angle_X, angle_Y, vit_angulaire_X, vit_angulaire_Y, accel_X, accel_Y, accel_Z, delta_t, coeff);
 
