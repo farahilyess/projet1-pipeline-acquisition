@@ -44,7 +44,7 @@ static uint32_t filtreInputVerification(float* angle_X, float* angle_Y, float vi
 
 uint32_t filtreCalculAngles(float* angle_X, float* angle_Y, float vit_angulaire_X, float vit_angulaire_Y, float accel_X, float accel_Y, float accel_Z, float delta_t, float coeff){
     
-    float angle_accelero_X, angle_accelero_Y;
+    float angle_accelero_X, angle_accelero_Y, angle_X_local, angle_Y_local;
 
     uint32_t filtre_verification_resultat = filtreInputVerification(angle_X, angle_Y, vit_angulaire_X, vit_angulaire_Y, accel_X, accel_Y, accel_Z, delta_t, coeff);
 
@@ -54,10 +54,20 @@ uint32_t filtreCalculAngles(float* angle_X, float* angle_Y, float vit_angulaire_
         angle_accelero_X = atan2f(accel_Y, sqrtf(accel_X * accel_X + accel_Z * accel_Z));
         angle_accelero_Y = atan2f(accel_X, sqrtf(accel_Y * accel_Y + accel_Z * accel_Z));
 
-        *angle_X = coeff * (*angle_X + vit_angulaire_X * delta_t) + (1.0f - coeff) * angle_accelero_X;
-        *angle_Y = coeff * (*angle_Y + vit_angulaire_Y * delta_t) + (1.0f - coeff) * angle_accelero_Y;
+        
+        angle_X_local = coeff * (*angle_X + vit_angulaire_X * delta_t) + (1.0f - coeff) * angle_accelero_X;
+        angle_Y_local = coeff * (*angle_Y + vit_angulaire_Y * delta_t) + (1.0f - coeff) * angle_accelero_Y;
 
-        filtre_resultat = FILTER_SUCCESS;
+        if (filtreIntervalleVerification(angle_X_local, FILTER_MIN_ANGLE, FILTER_MAX_ANGLE) && filtreIntervalleVerification(angle_Y_local, FILTER_MIN_ANGLE, FILTER_MAX_ANGLE)){
+
+            *angle_X = angle_X_local;
+            *angle_Y = angle_Y_local;
+
+            filtre_resultat = FILTER_SUCCESS;
+        }
+        else {
+            filtre_resultat = FILTER_OUTPUT_ANGLE_OUT_OF_RANGE;
+        }
     }
 
     return filtre_resultat;
