@@ -176,20 +176,26 @@ void i2cWrite(uint32_t i2c_registre_a_lire){
 int main(void){
 
 	uint8_t accel_Z_MSB, accel_Z_LSB;
-	uint8_t MSB, LSB;
+	uint8_t M_MSB, M_LSB, L_MSB, L_LSB;
+	float accel_Z_float_g;
 	usartInit();
 	i2cInit();
 
-	i2cWrite(MPU6050_REG_PWR_MGMT); // Mise en marche des mesures
+	i2cWrite(MPU6050_REG_PWR_MGMT); // Mise en marche des mesures, a mettre dnas l init ?
 
 	i2cRead(MPU6050_ACCEL_Z_MSB, &accel_Z_MSB);
 	i2cRead(MPU6050_ACCEL_Z_LSB, &accel_Z_LSB);
-	int16_t accel_Z = (int16_t)(((uint16_t) accel_Z_MSB << 8) | (uint16_t) accel_Z_LSB);
-	// usartConvertHexa(accel_Z_MSB, &MSB, &LSB);
-	//usartSend(MSB);
-	//usartSend(LSB);
-	//i2cRead(MPU6050_ACCEL_Z_LSB, &accel_Z_LSB);
-	//usartSend(accel_Z_LSB);
+
+	// Affichage en hexa de l acceleration selon Z
+	usartConvertHexa(accel_Z_MSB, &M_MSB, &M_LSB);
+	usartConvertHexa(accel_Z_LSB, &L_MSB, &L_LSB);
+	usartSend(M_MSB);
+	usartSend(M_LSB);
+	usartSend(L_MSB);
+	usartSend(L_LSB);
+
+	int16_t accel_Z = (int16_t)(((uint16_t) accel_Z_MSB << 8) | accel_Z_LSB);
+	accel_Z_float_g = ((float) accel_Z) / 16384.0f;
 
 
 	while(1){
