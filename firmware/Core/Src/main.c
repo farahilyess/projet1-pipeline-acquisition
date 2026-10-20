@@ -4,8 +4,21 @@
 #define MPU6050_I2C_ADDR (0x68UL)
 #define MPU6050_REG_WHO_AM_I (0x75UL)
 #define MPU6050_REG_PWR_MGMT (0x6BUL)
-#define MPU6050_ACCEL_Z_MSB (0x3FUL)
-#define MPU6050_ACCEL_Z_LSB (0x40UL)
+
+#define MPU6050_ACCEL_X_H (0x3BUL)
+#define MPU6050_ACCEL_X_L (0x3CUL)
+#define MPU6050_ACCEL_Y_H (0x3DUL)
+#define MPU6050_ACCEL_Y_L (0x3EUL)
+#define MPU6050_ACCEL_Z_H (0x3FUL)
+#define MPU6050_ACCEL_Z_L (0x40UL)
+#define MPU6050_TEMP_H (0x41UL)
+#define MPU6050_TEMP_L (0x42UL)
+#define MPU6050_GYRO_X_H (0x43UL)
+#define MPU6050_GYRO_X_L (0x44UL)
+#define MPU6050_GYRO_Y_H (0x45UL)
+#define MPU6050_GYRO_Y_L (0x46UL)
+#define MPU6050_GYRO_Z_H (0x47UL)
+#define MPU6050_GYRO_Z_L (0x48UL)
 
 
 #define I2C_WRITE_MODE (0UL)
@@ -94,9 +107,7 @@ void i2cInit(void){
 static void i2cStart(void){
 	I2C1->CR1 |= (1UL << 8); // START
 
-	while ((I2C1->SR1 & 0x01UL ) == 0){
-
-	}
+	while ((I2C1->SR1 & 0x01UL ) == 0){ }
 }
 
 void i2cRead(uint32_t i2c_registre_a_lire, uint8_t* valeur_lue){
@@ -107,26 +118,20 @@ void i2cRead(uint32_t i2c_registre_a_lire, uint8_t* valeur_lue){
 
 	I2C1->DR = (MPU6050_I2C_ADDR << 1) | (I2C_WRITE_MODE); // On concatene l'adresse avec le mode ecriture / lecture
 
-	while ((I2C1->SR1 & 0x02UL ) == 0){
-
-	}
+	while ((I2C1->SR1 & 0x02UL ) == 0){ }
 
 	(void)I2C1->SR1;
 	(void)I2C1->SR2;
 
 	I2C1->DR = i2c_registre_a_lire;
 
-	while ((I2C1->SR1 & 0x04UL ) == 0){
-
-	}
+	while ((I2C1->SR1 & 0x04UL ) == 0){ }
 
 	i2cStart();
 
 	I2C1->DR = (MPU6050_I2C_ADDR << 1) | (I2C_READ_MODE);
 
-	while ((I2C1->SR1 & 0x02UL ) == 0){
-
-	}
+	while ((I2C1->SR1 & 0x02UL ) == 0){ }
 
 	I2C1->CR1 &=~ (1UL << 10);
 
@@ -135,12 +140,61 @@ void i2cRead(uint32_t i2c_registre_a_lire, uint8_t* valeur_lue){
 
 	I2C1->CR1 |= (1UL << 9);
 
-	while ((I2C1->SR1 & 0x40UL ) == 0){
-
-	}
-
+	while ((I2C1->SR1 & 0x40UL ) == 0){ }
 
 	*valeur_lue = (uint8_t)I2C1->DR;
+
+}
+
+void i2cMultiByteRead(uint32_t i2c_registre_initial, uint8_t* tableau_mesures, uint32_t nombre_octets_lus){
+	//uint32_t read_result; // initialiser après comme dans le filtre en C
+
+	/*
+	 * Conditions d'utilisation : le nombre d'octets à lire minimum avec cette fonction est de 3
+	 */
+
+	i2cStart();
+
+	I2C1->DR = (MPU6050_I2C_ADDR << 1) | (I2C_WRITE_MODE); // On concatene l'adresse avec le mode ecriture / lecture
+
+	while ((I2C1->SR1 & 0x02UL ) == 0){ }
+
+	(void)I2C1->SR1;
+	(void)I2C1->SR2;
+
+	I2C1->DR = i2c_registre_initial;
+
+	while ((I2C1->SR1 & 0x04UL ) == 0){ }
+
+	i2cStart();
+
+	I2C1->CR1 |= (1UL << 10); // Pour continuer la lecture
+
+	I2C1->DR = (MPU6050_I2C_ADDR << 1) | (I2C_READ_MODE);
+
+	while ((I2C1->SR1 & 0x02UL ) == 0){ }
+
+	(void)I2C1->SR1;
+	(void)I2C1->SR2;
+
+	for(uint32_t i = 0; i < nombre_octets_lus - 3; i++){
+		while ((I2C1->SR1 & 0x40UL ) == 0){ }
+		tableau_mesures[i] = (uint8_t)I2C1->DR;
+	}
+
+	while ((I2C1->SR1 & 0x04UL ) == 0){ }
+
+	I2C1->CR1 &=~ (1UL << 10); // Pour arreter la lecture
+
+	tableau_mesures[nombre_octets_lus - 3] = (uint8_t)I2C1->DR;
+
+	I2C1->CR1 |= (1UL << 9);
+
+	tableau_mesures[nombre_octets_lus - 2] = (uint8_t)I2C1->DR;
+
+	while ((I2C1->SR1 & 0x40UL ) == 0){ }
+
+	tableau_mesures[nombre_octets_lus - 1] = (uint8_t)I2C1->DR;
 
 }
 
@@ -149,24 +203,18 @@ void i2cWrite(uint32_t i2c_registre_a_lire){
 
 	I2C1->DR = (MPU6050_I2C_ADDR << 1) | (I2C_WRITE_MODE); // On concatene l'adresse avec le mode ecriture / lecture
 
-	while ((I2C1->SR1 & 0x02UL ) == 0){
-
-	}
+	while ((I2C1->SR1 & 0x02UL ) == 0){ }
 
 	(void)I2C1->SR1;
 	(void)I2C1->SR2;
 
 	I2C1->DR = i2c_registre_a_lire;
 
-	while ((I2C1->SR1 & 0x04UL ) == 0){
-
-	}
+	while ((I2C1->SR1 & 0x04UL ) == 0){ }
 
 	I2C1->DR = 0x01;
 
-	while ((I2C1->SR1 & 0x04UL ) == 0){
-
-	}
+	while ((I2C1->SR1 & 0x04UL ) == 0){ }
 
 	I2C1->CR1 |= (1UL << 9);
 
@@ -175,28 +223,15 @@ void i2cWrite(uint32_t i2c_registre_a_lire){
 
 int main(void){
 
-	uint8_t accel_Z_MSB, accel_Z_LSB;
-	uint8_t M_MSB, M_LSB, L_MSB, L_LSB;
-	float accel_Z_float_g;
+	uint8_t tableau_mesures[14];
+	uint32_t nombre_octets_lus = 14;
+
 	usartInit();
 	i2cInit();
 
 	i2cWrite(MPU6050_REG_PWR_MGMT); // Mise en marche des mesures, a mettre dnas l init ?
 
-	i2cRead(MPU6050_ACCEL_Z_MSB, &accel_Z_MSB);
-	i2cRead(MPU6050_ACCEL_Z_LSB, &accel_Z_LSB);
-
-	// Affichage en hexa de l acceleration selon Z
-	usartConvertHexa(accel_Z_MSB, &M_MSB, &M_LSB);
-	usartConvertHexa(accel_Z_LSB, &L_MSB, &L_LSB);
-	usartSend(M_MSB);
-	usartSend(M_LSB);
-	usartSend(L_MSB);
-	usartSend(L_LSB);
-
-	int16_t accel_Z = (int16_t)(((uint16_t) accel_Z_MSB << 8) | accel_Z_LSB);
-	accel_Z_float_g = ((float) accel_Z) / 16384.0f;
-
+	i2cMultiByteRead(MPU6050_ACCEL_X_H, tableau_mesures, nombre_octets_lus);
 
 	while(1){
 
