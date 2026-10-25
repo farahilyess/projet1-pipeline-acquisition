@@ -43,5 +43,5 @@ filtre/Ada/          filtre complémentaire en Ada
 * Package d'interface Ada avec C
 * CAN
 
-Outils : STM32CubeIDE, Git, GNAT pour Ada, cppcheck, Visual Studio, Windows \& Ubuntu.
+Outils : STM32CubeIDE, Git, GNAT pour Ada, cppcheck, VS Code, Windows \& Ubuntu.
 
