@@ -4,10 +4,36 @@
 #define I2C_WRITE_MODE (0UL)
 #define I2C_READ_MODE (1UL)
 
-static void i2cStart(void){
+#define I2C_WAIT_SUCCESS (0UL)
+#define I2C_START_SUCCESS (0UL)
+
+
+static uint32_t i2cWait(uint32_t drapeau_a_attendre){
+	uint32_t resultat = I2C_WAIT_SUCCESS;
+	uint32_t compteur = 0;
+	const uint32_t nb_tours_max = 4000; // 4000 tours ≈ 1,2 à 2,4 ms à 16 MHz (> 10 × un octet I2C). A revoir si la fréquence change 
+
+	while (((I2C1->SR1 & drapeau_a_attendre ) == 0UL) && (compteur < nb_tours_max)){ 
+		compteur++;
+	}
+
+	if ((I2C1->SR1 & drapeau_a_attendre ) == 0UL){
+		resultat = I2C_WAIT_FAIL;
+	}
+	else{
+		// rien, l'attente s'est bien passée
+	}
+
+	return resultat;
+}
+
+static uint32_t i2cStart(void){
+	uint32_t resultat_start = I2C_START_SUCCESS;
 	I2C1->CR1 |= (1UL << 8); // START
 
-	while ((I2C1->SR1 & 0x01UL ) == 0UL){ }
+	resultat_start = i2cWait(0x01UL);
+
+	return resultat_start;
 }
 
 void i2cInit(void){
@@ -36,117 +62,166 @@ void i2cInit(void){
 
 }
 
-void i2cRead(uint8_t adresse_capteur, uint8_t registre_a_lire, uint8_t* valeur_lue){
+uint32_t i2cRead(uint8_t adresse_capteur, uint8_t registre_a_lire, uint8_t* valeur_lue){
+	uint32_t resultat_read = I2C_READ_SUCCESS; 
+	resultat_read = i2cStart();
 
-	//uint32_t read_result; // initialiser après comme dans le filtre en C
+	if (resultat_read == I2C_START_SUCCESS){
+		I2C1->DR = (adresse_capteur << 1) | (I2C_WRITE_MODE); // On concatene l'adresse avec le mode ecriture / lecture
 
-	i2cStart();
+		resultat_read = i2cWait(0x02UL);
+	}
 
-	I2C1->DR = (adresse_capteur << 1) | (I2C_WRITE_MODE); // On concatene l'adresse avec le mode ecriture / lecture
+	if (resultat_read == I2C_WAIT_SUCCESS){
 
-	while ((I2C1->SR1 & 0x02UL ) == 0UL){ }
+		(void)I2C1->SR1;
+		(void)I2C1->SR2;
 
-	(void)I2C1->SR1;
-	(void)I2C1->SR2;
+		I2C1->DR = registre_a_lire;
 
-	I2C1->DR = registre_a_lire;
+		resultat_read = i2cWait(0x04UL);
+	}
 
-	while ((I2C1->SR1 & 0x04UL ) == 0UL){ }
+	if (resultat_read == I2C_WAIT_SUCCESS){	
+		resultat_read = i2cStart();
+	}
 
-	i2cStart();
+	if (resultat_read == I2C_START_SUCCESS){	
+		I2C1->DR = (adresse_capteur << 1) | (I2C_READ_MODE);
 
-	I2C1->DR = (adresse_capteur << 1) | (I2C_READ_MODE);
+		resultat_read = i2cWait(0x02UL);
+	}
 
-	while ((I2C1->SR1 & 0x02UL ) == 0UL){ }
+	if (resultat_read == I2C_WAIT_SUCCESS){
 
-	I2C1->CR1 &=~ (1UL << 10);
+		I2C1->CR1 &=~ (1UL << 10);
 
-	(void)I2C1->SR1;
-	(void)I2C1->SR2;
+		(void)I2C1->SR1;
+		(void)I2C1->SR2;
 
-	I2C1->CR1 |= (1UL << 9);
+		I2C1->CR1 |= (1UL << 9);
 
-	while ((I2C1->SR1 & 0x40UL ) == 0UL){ }
+		resultat_read = i2cWait(0x40UL);
 
-	*valeur_lue = (uint8_t)I2C1->DR;
-
+	}
+	
+	if (resultat_read == I2C_WAIT_SUCCESS){
+		*valeur_lue = (uint8_t)I2C1->DR;
+		resultat_read = I2C_READ_SUCCESS;
+	}
+	
+	return resultat_read;
 }
 
-void i2cMultiByteRead(uint8_t adresse_capteur, uint8_t registre_initial, uint8_t* tableau_mesures, uint32_t taille_tableau, uint32_t nb_octets_a_lire){
-	//uint32_t read_result; // initialiser après comme dans le filtre en C
+uint32_t i2cMultiByteRead(uint8_t adresse_capteur, uint8_t registre_initial, uint8_t* tableau_mesures, uint32_t taille_tableau, uint32_t nb_octets_a_lire){
+	uint32_t resultat_read = I2C_MULTI_BYTE_READ_SUCCESS; 
 
-	/*
-	 * Conditions d'utilisation : le nombre d'octets à lire minimum avec cette fonction est de 3
-	 */
+	/* Conditions d'utilisation : le nombre d'octets à lire minimum avec cette fonction est de 3 */
 
 	// Pour empecher les accès hors tableau
 	if (nb_octets_a_lire > taille_tableau){
-		// faire un retour d erreur 
-	}
-	
-	i2cStart();
-
-	I2C1->DR = (adresse_capteur << 1) | (I2C_WRITE_MODE); // On concatene l'adresse avec le mode ecriture / lecture
-
-	while ((I2C1->SR1 & 0x02UL ) == 0UL){ }
-
-	(void)I2C1->SR1;
-	(void)I2C1->SR2;
-
-	I2C1->DR = registre_initial;
-
-	while ((I2C1->SR1 & 0x04UL ) == 0UL){ }
-
-	i2cStart();
-
-	I2C1->CR1 |= (1UL << 10); // Pour continuer la lecture
-
-	I2C1->DR = (adresse_capteur << 1) | (I2C_READ_MODE);
-
-	while ((I2C1->SR1 & 0x02UL ) == 0UL){ }
-
-	(void)I2C1->SR1;
-	(void)I2C1->SR2;
-
-	for(uint32_t i = 0; i < (nb_octets_a_lire - 3UL); i++){
-		while ((I2C1->SR1 & 0x40UL ) == 0UL){ }
-		tableau_mesures[i] = (uint8_t)I2C1->DR;
+		resultat_read =  I2C_ERROR_TAB_SIZE;
 	}
 
-	while ((I2C1->SR1 & 0x04UL ) == 0UL){ }
+	if (resultat_read == I2C_MULTI_BYTE_READ_SUCCESS){
+		resultat_read = i2cStart();
+	}
 
-	I2C1->CR1 &=~ (1UL << 10); // Pour arreter la lecture
+	if (resultat_read == I2C_START_SUCCESS){
+		I2C1->DR = (adresse_capteur << 1) | (I2C_WRITE_MODE); // On concatene l'adresse avec le mode ecriture / lecture
 
-	tableau_mesures[nb_octets_a_lire - 3UL] = (uint8_t)I2C1->DR;
+		resultat_read = i2cWait(0x02UL);
+	}
 
-	I2C1->CR1 |= (1UL << 9);
+	if (resultat_read == I2C_WAIT_SUCCESS){
+		(void)I2C1->SR1;
+		(void)I2C1->SR2;
 
-	tableau_mesures[nb_octets_a_lire - 2UL] = (uint8_t)I2C1->DR;
+		I2C1->DR = registre_initial;
 
-	while ((I2C1->SR1 & 0x40UL ) == 0UL){ }
+		resultat_read = i2cWait(0x04UL); 
+	}
 
-	tableau_mesures[nb_octets_a_lire - 1UL] = (uint8_t)I2C1->DR;
+	if (resultat_read == I2C_WAIT_SUCCESS){
+		resultat_read = i2cStart();
+	}
 
+	if (resultat_read == I2C_START_SUCCESS){
+		I2C1->CR1 |= (1UL << 10); // Pour continuer la lecture
+
+		I2C1->DR = (adresse_capteur << 1) | (I2C_READ_MODE);
+
+		resultat_read = i2cWait(0x02UL);
+	}
+
+	if (resultat_read == I2C_WAIT_SUCCESS){
+		(void)I2C1->SR1;
+		(void)I2C1->SR2;
+
+		for(uint32_t i = 0; i < (nb_octets_a_lire - 3UL); i++){
+			resultat_read = i2cWait(0x40UL); 
+			if (resultat_read == I2C_WAIT_SUCCESS){
+				tableau_mesures[i] = (uint8_t)I2C1->DR;
+			}
+			else{
+				break;
+			}
+		}
+	}
+
+	if (resultat_read == I2C_WAIT_SUCCESS){
+		resultat_read = i2cWait(0x04UL); 
+	}
+
+	if (resultat_read == I2C_WAIT_SUCCESS){
+		I2C1->CR1 &=~ (1UL << 10); // Pour arreter la lecture
+
+		tableau_mesures[nb_octets_a_lire - 3UL] = (uint8_t)I2C1->DR;
+
+		I2C1->CR1 |= (1UL << 9);
+
+		tableau_mesures[nb_octets_a_lire - 2UL] = (uint8_t)I2C1->DR;
+
+		resultat_read = i2cWait(0x40UL); 
+	}
+
+	if (resultat_read == I2C_WAIT_SUCCESS){
+		tableau_mesures[nb_octets_a_lire - 1UL] = (uint8_t)I2C1->DR;
+		resultat_read = I2C_MULTI_BYTE_READ_SUCCESS;
+	}
+
+	return resultat_read;
 }
 
-void i2cWrite(uint8_t adresse_capteur, uint8_t registre_a_modifier, uint8_t valeur_a_ecrire){
-	i2cStart();
+uint32_t i2cWrite(uint8_t adresse_capteur, uint8_t registre_a_modifier, uint8_t valeur_a_ecrire){
+	uint32_t resultat_write = I2C_WRITE_SUCCESS;
+	resultat_write = i2cStart();
 
-	I2C1->DR = (adresse_capteur << 1) | (I2C_WRITE_MODE); // On concatene l'adresse avec le mode ecriture / lecture
+	if (resultat_write == I2C_START_SUCCESS){
+		I2C1->DR = (adresse_capteur << 1) | (I2C_WRITE_MODE); // On concatene l'adresse avec le mode ecriture / lecture
 
-	while ((I2C1->SR1 & 0x02UL ) == 0UL){ }
+		resultat_write = i2cWait(0x02UL);
+	}
 
-	(void)I2C1->SR1;
-	(void)I2C1->SR2;
+	if (resultat_write == I2C_WAIT_SUCCESS){
+		(void)I2C1->SR1;
+		(void)I2C1->SR2;
 
-	I2C1->DR = registre_a_modifier;
+		I2C1->DR = registre_a_modifier;
 
-	while ((I2C1->SR1 & 0x04UL ) == 0UL){ }
+		resultat_write = i2cWait(0x04UL);
+	}
 
-	I2C1->DR = valeur_a_ecrire;
+	if (resultat_write == I2C_WAIT_SUCCESS){
+		I2C1->DR = valeur_a_ecrire;
 
-	while ((I2C1->SR1 & 0x04UL ) == 0UL){ }
+		resultat_write = i2cWait(0x04UL);
+	}
 
-	I2C1->CR1 |= (1UL << 9);
+	if (resultat_write == I2C_WAIT_SUCCESS){
+		I2C1->CR1 |= (1UL << 9);
+		resultat_write = I2C_WRITE_SUCCESS;
+	}
 
+	return resultat_write;
 }

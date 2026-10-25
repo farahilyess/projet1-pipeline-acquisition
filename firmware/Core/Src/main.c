@@ -26,6 +26,8 @@ static void convertHexa(uint8_t entree, char* MSB_sortie, char* LSB_sortie){
 }
 
 int main(void){
+	uint32_t resultat_write;
+	uint32_t resultat_multi_byte_read;
 
 	uint32_t nb_octets_a_lire = MPU6050_NB_OF_REGISTERS_TO_READ;
 	uint8_t tableau_mesures[MPU6050_NB_OF_REGISTERS_TO_READ];
@@ -33,9 +35,10 @@ int main(void){
     
 	usartInit();
 	i2cInit();
-	i2cWrite(MPU6050_ADDR, MPU6050_REG_PWR_MGMT, MPU6050_PWR_MGMT_WAKEUP); // Lancement des mesures MPU6050
-	i2cMultiByteRead(MPU6050_ADDR, MPU6050_INITIAL_REGISTER, tableau_mesures, taille_tableau_mesures, nb_octets_a_lire);
 
+	resultat_write = i2cWrite(MPU6050_ADDR, MPU6050_REG_PWR_MGMT, MPU6050_PWR_MGMT_WAKEUP); // Lancement des mesures MPU6050
+	resultat_multi_byte_read = i2cMultiByteRead(MPU6050_ADDR, MPU6050_INITIAL_REGISTER, tableau_mesures, taille_tableau_mesures, nb_octets_a_lire);
+	
 	while(1){
 
 	}
