@@ -2,6 +2,10 @@
 #include "i2c.h"
 #include "usart.h"
 #include "MPU6050.h"
+#include "FreeRTOS.h"
+#include "task.h"
+
+#define USART_TASK_PERIOD_MS (500UL)
 
 static void convertHexa(uint8_t entree, char* MSB_sortie, char* LSB_sortie){
 
@@ -25,21 +29,41 @@ static void convertHexa(uint8_t entree, char* MSB_sortie, char* LSB_sortie){
 
 }
 
+
+static void usartTask(void * parameters) __attribute__((noreturn));
+
+static void usartTask(void * parameters){
+    /* Unused parameters. */
+    (void) parameters;
+    uint8_t msg = 'Y';
+
+    for(;;)
+    {
+    	usartSend(msg);
+        vTaskDelay(USART_TASK_PERIOD_MS);
+    }
+}
+
 int main(void){
-	uint32_t resultat_write;
-	uint32_t resultat_multi_byte_read;
+    static StaticTask_t usartTaskTCB;
+    static StackType_t usartTaskStack[configMINIMAL_STACK_SIZE];
 
-	uint32_t nb_octets_a_lire = MPU6050_NB_OF_REGISTERS_TO_READ;
-	uint8_t tableau_mesures[MPU6050_NB_OF_REGISTERS_TO_READ];
-	uint32_t taille_tableau_mesures = sizeof(tableau_mesures) / sizeof(tableau_mesures[0]);
-    
 	usartInit();
-	i2cInit();
 
-	resultat_write = i2cWrite(MPU6050_ADDR, MPU6050_REG_PWR_MGMT, MPU6050_PWR_MGMT_WAKEUP); // Lancement des mesures MPU6050
-	resultat_multi_byte_read = i2cMultiByteRead(MPU6050_ADDR, MPU6050_INITIAL_REGISTER, tableau_mesures, taille_tableau_mesures, nb_octets_a_lire);
-	
-	while(1){
+    (void)xTaskCreateStatic(&usartTask,
+    						   "USART",
+			  configMINIMAL_STACK_SIZE,
+			                      NULL,
+             configMAX_PRIORITIES - 1U,
+			      &(usartTaskStack[0]),
+				      &(usartTaskTCB));
 
-	}
+    /* Start the scheduler. */
+    vTaskStartScheduler();
+
+    for(;;){
+
+    }
+
+
 }

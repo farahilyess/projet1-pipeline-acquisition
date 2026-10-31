@@ -3,6 +3,10 @@
 
 #include "stm32f446xx.h"
 
+#define vPortSVCHandler     SVC_Handler
+#define xPortPendSVHandler  PendSV_Handler
+#define xPortSysTickHandler SysTick_Handler
+
 #define configCPU_CLOCK_HZ                   	 	 (16000000UL)
 #define configTICK_RATE_HZ                   	 	 (1000UL)
 #define configUSE_PREEMPTION                  	 	 (1UL)
@@ -19,6 +23,7 @@
 #define configUSE_TIMERS                      		 (0UL)
 #define configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY (5UL)
 #define configMAX_SYSCALL_INTERRUPT_PRIORITY  		 (configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY << (8UL - __NVIC_PRIO_BITS))
+#define configKERNEL_PROVIDED_STATIC_MEMORY 		 (1UL)
 
 #define INCLUDE_vTaskPrioritySet               (1UL)
 #define INCLUDE_uxTaskPriorityGet              (1UL)
