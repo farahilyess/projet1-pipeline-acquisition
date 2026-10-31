@@ -1,2 +1,3 @@
 firmware/Drivers/** linguist-vendored
 firmware/Core/Startup/** linguist-vendored
+firmware/FreeRTOS/
